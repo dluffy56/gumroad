@@ -130,6 +130,7 @@ class ProfileSectionsPresenter
           }
         )
       )
+      search_results[:total] = section.shown_products.length
       search_results[:products] = search_results[:products].ids
       search_results
     end
