@@ -50,6 +50,16 @@ class OfferCode < ApplicationRecord
   scope :universal_with_matching_currency, ->(currency_type) { where("universal = 1 and (currency_type = ? or currency_type is null)", currency_type) }
   scope :universal, -> { where(universal: true) }
 
+  belongs_to :required_product, class_name: "Link", optional: true
+
+  validates :required_product_max_age_months,
+            numericality: { only_integer: true, greater_than: 0, allow_nil: true }
+
+  validate :required_product_belongs_to_same_seller
+  validate :required_product_not_universal_or_self
+  validate :ownership_months_requires_required_product
+  validate :validate_required_product_discount_type
+
   def is_valid_for_purchase?(purchase_quantity: 1)
     return true if max_purchase_count.nil?
 
@@ -199,6 +209,19 @@ class OfferCode < ApplicationRecord
     attr == "code" ? "Discount code" : super
   end
 
+  def meets_required_product_requirement?(purchaser_email:)
+    return true unless required_product_id.present?
+    return true if purchaser_email.blank?
+
+    purchase = find_required_product_purchase(purchaser_email)
+    return false unless purchase
+
+    return true unless required_product_max_age_months.present?
+
+    months_owned = ((Time.current - purchase.created_at) / 1.month).floor
+    months_owned < required_product_max_age_months
+  end
+
   private
     def max_purchase_count_is_greater_than_or_equal_to_inventory_sold
       return if deleted_at.present?
@@ -300,5 +323,56 @@ class OfferCode < ApplicationRecord
 
     def reindex_captured_products
       reindex_associated_products(products_to_reindex: Link.where(id: @product_ids_to_reindex)) if @product_ids_to_reindex.present?
+    end
+
+    def find_required_product_purchase(purchaser_email)
+      user = User.find_by(email: purchaser_email)
+
+      scope = Purchase.successful.where(link_id: required_product_id)
+      scope = if user
+        scope.where("purchaser_id = ? OR email = ?", user.id, purchaser_email)
+      else
+        scope.where(email: purchaser_email)
+      end
+
+      scope.order(created_at: :asc).first
+    end
+
+    def required_product_belongs_to_same_seller
+      return unless required_product_id.present?
+
+      if required_product&.user_id != user_id
+        errors.add(:required_product_id, "must belong to the same seller")
+      end
+    end
+
+    def required_product_not_universal_or_self
+      return unless required_product_id.present?
+
+      if universal?
+        errors.add(:required_product_id, "cannot be used with universal offer codes")
+      end
+
+      if products.exists?(required_product_id)
+        errors.add(:required_product_id, "cannot be one of the discounted products")
+      end
+    end
+
+    def ownership_months_requires_required_product
+      if required_product_id.blank? && required_product_max_age_months.present?
+        errors.add(
+          :required_product_max_age_months,
+          "requires a required product to be selected"
+        )
+      end
+    end
+    def validate_required_product_discount_type
+      return unless required_product_id.present?
+      return if is_percent?
+
+      errors.add(
+        :base,
+        "Discount codes with required products must use percentage-based discounts."
+      )
     end
 end

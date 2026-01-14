@@ -2,9 +2,12 @@
 
 class OfferCodesController < ApplicationController
   def compute_discount
-    response = OfferCodeDiscountComputingService.new(params[:code], params[:products]).process
+    purchaser_email = logged_in_user&.email || params[:email]
+    response = OfferCodeDiscountComputingService.new(params[:code], params[:products], purchaser_email: purchaser_email).process
     response = if response[:error_code].present?
       error_message = case response.fetch(:error_code)
+                      when :missing_required_product
+                        "Sorry, this discount code requires you to own a specific product first."
                       when :insufficient_times_of_use
                         "Sorry, the discount code you are using is invalid for the quantity you have selected."
                       when :sold_out

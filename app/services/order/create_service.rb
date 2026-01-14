@@ -83,13 +83,14 @@ class Order::CreateService
     end
 
     offer_codes = offer_codes
-                    .map { |offer_code, products| { code: offer_code, result: OfferCodeDiscountComputingService.new(offer_code, products).process } }
-                    .filter_map do |response|
-      {
-        code: response[:code],
-        products: response[:result][:products_data].transform_values { _1[:discount] },
-      } if response[:result][:error_code].blank?
-    end
+      .map do |offer_code, products| { code: offer_code, result: OfferCodeDiscountComputingService.new(offer_code, products, purchaser_email: buyer&.email).process}
+      end
+      .filter_map do |response|
+        {
+          code: response[:code],
+          products: response[:result][:products_data].transform_values { _1[:discount] },
+        } if response[:result][:error_code].blank?
+      end
 
     return order, purchase_responses, offer_codes
   end

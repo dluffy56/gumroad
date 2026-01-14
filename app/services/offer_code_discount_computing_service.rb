@@ -11,9 +11,10 @@ class OfferCodeDiscountComputingService
   #   => A[2], B[3], C[2] --> A[2], C[2]
   #   => A[2], C[3]       --> A[2]
 
-  def initialize(code, products)
+  def initialize(code, products, purchaser_email: nil)
     @code = code
     @products = products
+    @purchaser_email = purchaser_email
   end
 
   def process
@@ -25,6 +26,10 @@ class OfferCodeDiscountComputingService
 
       next unless offer_code
       track_applicable_offer_code(offer_code)
+
+      unless eligible_for_required_product?(offer_code)
+        return { products_data: {}, error_code: :missing_required_product }
+      end
 
       if eligible?(offer_code, purchase_quantity)
         track_usage(offer_code, purchase_quantity)
@@ -42,7 +47,7 @@ class OfferCodeDiscountComputingService
   end
 
   private
-    attr_reader :code, :products
+    attr_reader :code, :products, :purchaser_email
 
     def links
       @_links ||= Link.visible
@@ -145,5 +150,14 @@ class OfferCodeDiscountComputingService
 
         products_data[cross_sell.product.unique_permalink] = { discount: offer_code.discount }
       end
+    end
+
+    def eligible_for_required_product?(offer_code)
+      return true unless offer_code.required_product_id.present?
+      return true unless purchaser_email.present? # ✅ Preview mode
+
+      offer_code.meets_required_product_requirement?(
+        purchaser_email: purchaser_email
+      )
     end
 end

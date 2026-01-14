@@ -3377,6 +3377,17 @@ class Purchase < ApplicationRecord
         return
       end
 
+      if offer_code.required_product_id.present?
+        unless offer_code.meets_required_product_requirement?(purchaser_email: email)
+          self.error_code = PurchaseErrorCode::OFFER_CODE_MISSING_REQUIRED_PRODUCT
+          errors.add(
+            :base,
+            "Sorry, this discount code requires you to own a specific product first."
+          )
+          return
+        end
+      end
+
       return if offer_code.is_valid_for_purchase?(purchase_quantity: quantity)
 
       if offer_code.quantity_left > 0
