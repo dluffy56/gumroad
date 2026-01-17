@@ -76,6 +76,8 @@ export type OfferCode = {
   minimum_amount_cents: number | null;
   required_product_id: string | null;
   required_product_max_age_months: number | null;
+  fallback_amount_percentage: number | null;
+  fallback_amount_cents: number | null;
 };
 
 export type SortKey = "name" | "revenue" | "uses" | "term";
@@ -834,7 +836,13 @@ const [requiredProductMaxAgeMonths, setRequiredProductMaxAgeMonths] =
   React.useState<number | null>(
     offerCode?.required_product_max_age_months ?? null,
   );
+const [fallbackAmountPercentage, setFallbackAmountPercentage] = React.useState<number | null>(
+  offerCode?.fallback_amount_percentage ?? null
+);
 
+const [fallbackAmountCents, setFallbackAmountCents] = React.useState<number | null>(
+  offerCode?.fallback_amount_cents ?? null
+);
   const handleSubmit = () => {
     const isNameInvalid = name.value === "";
     const isCodeInvalid = code.value === "";
@@ -891,9 +899,9 @@ const [requiredProductMaxAgeMonths, setRequiredProductMaxAgeMonths] =
       duration_in_billing_cycles: canSetDuration ? durationInBillingCycles : null,
       minimum_amount_cents: hasMinimumAmount ? minimumAmount.value : null,
       required_product_id: hasRequiredProduct ? requiredProductId : null,
-      required_product_max_age_months: hasRequiredProduct
-        ? requiredProductMaxAgeMonths
-        : null,
+      required_product_max_age_months: hasRequiredProduct ? requiredProductMaxAgeMonths : null,
+      fallback_amount_percentage: hasRequiredProduct ? fallbackAmountPercentage : null,
+      fallback_amount_cents: hasRequiredProduct ? fallbackAmountCents : null,
     });
   };
 
@@ -1240,6 +1248,8 @@ const [requiredProductMaxAgeMonths, setRequiredProductMaxAgeMonths] =
                     if (!checked) {
                       setRequiredProductId(null);
                       setRequiredProductMaxAgeMonths(null);
+                      setFallbackAmountPercentage(null);
+                      setFallbackAmountCents(null);
                     }
                   }}
                 />
@@ -1291,6 +1301,37 @@ const [requiredProductMaxAgeMonths, setRequiredProductMaxAgeMonths] =
                   {(props) => <input {...props} placeholder="e.g. 6" />}
                 </NumberInput>
               </fieldset>
+                <fieldset>
+              <legend>
+                <label>Fallback discount (percentage)</label>
+              </legend>
+              <NumberInput
+                value={fallbackAmountPercentage}
+                onChange={(value) => {
+                  if (value === null || (value >= 0 && value <= 100)) {
+                    setFallbackAmountPercentage(value);
+                  }
+                }}
+              >
+                {(props) => <input {...props} placeholder="e.g. 50" />}
+              </NumberInput>
+            </fieldset>
+
+            <fieldset>
+              <legend>
+                <label>Fallback discount (cents)</label>
+              </legend>
+              <NumberInput
+                value={fallbackAmountCents}
+                onChange={(value) => {
+                  if (value === null || value > 0) {
+                    setFallbackAmountCents(value);
+                  }
+                }}
+              >
+                {(props) => <input {...props} placeholder="e.g. 1000" />}
+              </NumberInput>
+            </fieldset>
             </div>
           </Details>
 

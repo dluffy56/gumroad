@@ -28,7 +28,15 @@ class OfferCodeDiscountComputingService
       track_applicable_offer_code(offer_code)
 
       unless eligible_for_required_product?(offer_code)
-        return { products_data: {}, error_code: :missing_required_product }
+        return {
+          products_data: {},
+          error_code: :missing_required_product,
+          required_product_name: offer_code.required_product&.name,
+          required_product_permalink: offer_code.required_product&.unique_permalink,
+          max_age_months: offer_code.required_product_max_age_months
+        }
+
+
       end
 
       if eligible?(offer_code, purchase_quantity)
@@ -154,10 +162,13 @@ class OfferCodeDiscountComputingService
 
     def eligible_for_required_product?(offer_code)
       return true unless offer_code.required_product_id.present?
-      return true unless purchaser_email.present? # ✅ Preview mode
 
-      offer_code.meets_required_product_requirement?(
-        purchaser_email: purchaser_email
-      )
+      return false unless purchaser_email.present?
+
+      if @logged_in_user && purchaser_email != @logged_in_user.email
+        Rails.logger.warn("[SECURITY] Email mismatch: session=#{@logged_in_user.email}, claimed=#{purchaser_email}")
+        return false
+      end
+      offer_code.meets_required_product_requirement?(purchaser_email: purchaser_email)
     end
 end

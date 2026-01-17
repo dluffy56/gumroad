@@ -58,7 +58,8 @@ class OfferCode < ApplicationRecord
   validate :required_product_belongs_to_same_seller
   validate :required_product_not_universal_or_self
   validate :ownership_months_requires_required_product
-  validate :validate_required_product_discount_type
+  validates :fallback_amount_percentage, numericality: { only_integer: true, allow_nil: true }
+  validates :fallback_amount_cents, numericality: { only_integer: true, allow_nil: true }
 
   def is_valid_for_purchase?(purchase_quantity: 1)
     return true if max_purchase_count.nil?
@@ -222,6 +223,37 @@ class OfferCode < ApplicationRecord
     months_owned < required_product_max_age_months
   end
 
+  def eligibility_tier_for(purchaser_email:)
+    return nil unless required_product_id.present?
+    return nil if purchaser_email.blank?
+
+    purchase = find_required_product_purchase(purchaser_email)
+    return nil unless purchase
+
+    return nil unless required_product_max_age_months.present?
+
+    cutoff_date = Time.current - required_product_max_age_months.months
+
+    if purchase.created_at >= cutoff_date
+      :primary
+    elsif fallback_amount_percentage || fallback_amount_cents
+      :fallback
+    else
+      nil
+    end
+  end
+
+  def discount_for_tier(tier)
+    case tier
+    when :primary
+      { percentage: amount_percentage, cents: amount_cents }
+    when :fallback
+      { percentage: fallback_amount_percentage, cents: fallback_amount_cents }
+    else
+      nil
+    end
+  end
+
   private
     def max_purchase_count_is_greater_than_or_equal_to_inventory_sold
       return if deleted_at.present?
@@ -334,7 +366,8 @@ class OfferCode < ApplicationRecord
       else
         scope.where(email: purchaser_email)
       end
-
+      scope = scope.where(refunded_at: nil, disputed_at: nil)
+      scope = scope.where.not(status: 'canceled') if Purchase.column_names.include?("status")
       scope.order(created_at: :asc).first
     end
 
@@ -365,14 +398,5 @@ class OfferCode < ApplicationRecord
           "requires a required product to be selected"
         )
       end
-    end
-    def validate_required_product_discount_type
-      return unless required_product_id.present?
-      return if is_percent?
-
-      errors.add(
-        :base,
-        "Discount codes with required products must use percentage-based discounts."
-      )
     end
 end

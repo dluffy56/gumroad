@@ -7,7 +7,7 @@ class OfferCodesController < ApplicationController
     response = if response[:error_code].present?
       error_message = case response.fetch(:error_code)
                       when :missing_required_product
-                        "Sorry, this discount code requires you to own a specific product first."
+                        "Sorry, the discount code requires you to own a specific product first."
                       when :insufficient_times_of_use
                         "Sorry, the discount code you are using is invalid for the quantity you have selected."
                       when :sold_out
