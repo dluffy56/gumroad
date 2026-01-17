@@ -53,7 +53,18 @@ class Checkout::DiscountsController < Sellers::BaseController
     authorize [:checkout, OfferCode]
 
     parse_date_times
-    offer_code = current_seller.offer_codes.build(products: current_seller.products.by_external_ids(offer_code_params[:selected_product_ids]), **offer_code_params.except(:selected_product_ids))
+
+    attrs = offer_code_params.except(:selected_product_ids)
+
+    if attrs[:required_product_id].present?
+      required_product = current_seller.products.find_by_external_id!(attrs[:required_product_id])
+      attrs[:required_product_id] = required_product.id
+    end
+
+    offer_code = current_seller.offer_codes.build(
+      products: current_seller.products.by_external_ids(offer_code_params[:selected_product_ids]),
+      **attrs
+    )
 
     if offer_code.save
       pagination, offer_codes = fetch_offer_codes
@@ -69,14 +80,37 @@ class Checkout::DiscountsController < Sellers::BaseController
     authorize [:checkout, offer_code]
 
     parse_date_times
-    if offer_code.update(**offer_code_params.except(:selected_product_ids, :code), products: current_seller.products.by_external_ids(offer_code_params[:selected_product_ids]))
+
+    attrs = offer_code_params.except(:selected_product_ids, :code)
+
+    if attrs[:required_product_id].present?
+      required_product =
+        current_seller.products.find_by_external_id!(attrs[:required_product_id])
+
+      attrs[:required_product_id] = required_product.id
+    end
+
+    if offer_code.update(
+        **attrs,
+        products: current_seller.products.by_external_ids(
+          offer_code_params[:selected_product_ids]
+        )
+      )
       pagination, offer_codes = fetch_offer_codes
       presenter = Checkout::DiscountsPresenter.new(pundit_user:)
-      render json: { success: true, offer_codes: offer_codes.map { presenter.offer_code_props(_1) }, pagination: }
+      render json: {
+        success: true,
+        offer_codes: offer_codes.map { presenter.offer_code_props(_1) },
+        pagination:
+      }
     else
-      render json: { success: false, error_message: offer_code.errors.full_messages.first }
+      render json: {
+        success: false,
+        error_message: offer_code.errors.full_messages.first
+      }
     end
   end
+
 
   def destroy
     offer_code = OfferCode.find_by_external_id!(params[:id])
@@ -91,7 +125,8 @@ class Checkout::DiscountsController < Sellers::BaseController
 
   private
     def offer_code_params
-      params.permit(:name, :code, :universal, :max_purchase_count, :amount_cents, :amount_percentage, :currency_type, :valid_at, :expires_at, :minimum_quantity, :duration_in_billing_cycles, :minimum_amount_cents, selected_product_ids: [])
+      params.permit(:name, :code, :universal, :max_purchase_count, :amount_cents, :amount_percentage, :currency_type, :valid_at, :expires_at, :minimum_quantity, :duration_in_billing_cycles, :minimum_amount_cents,
+       :required_product_id, :required_product_max_age_months, selected_product_ids: [])
     end
 
     def paged_params

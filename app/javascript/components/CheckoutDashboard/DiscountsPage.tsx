@@ -74,6 +74,8 @@ export type OfferCode = {
   duration_in_billing_cycles: Duration | null;
   minimum_quantity: number | null;
   minimum_amount_cents: number | null;
+  required_product_id: string | null;
+  required_product_max_age_months: number | null;
 };
 
 export type SortKey = "name" | "revenue" | "uses" | "term";
@@ -668,6 +670,8 @@ const DiscountsPage = ({
             minimumQuantity: offerCode.minimum_quantity,
             durationInBillingCycles: offerCode.duration_in_billing_cycles,
             minimumAmount: offerCode.minimum_amount_cents,
+            requiredProductId: offerCode.required_product_id,
+            requiredProductMaxAgeMonths: offerCode.required_product_max_age_months,
           });
           resetQueryState();
           setState({ offerCodes, pagination });
@@ -711,6 +715,9 @@ const DiscountsPage = ({
             minimumQuantity: offerCode.minimum_quantity,
             durationInBillingCycles: offerCode.duration_in_billing_cycles,
             minimumAmount: offerCode.minimum_amount_cents,
+            requiredProductId: offerCode.required_product_id,
+            requiredProductMaxAgeMonths: offerCode.required_product_max_age_months,
+
           });
           resetQueryState();
           setState({ offerCodes, pagination });
@@ -815,6 +822,19 @@ const Form = ({
 
   const uid = React.useId();
 
+  const [hasRequiredProduct, setHasRequiredProduct] = React.useState(
+  Boolean(offerCode?.required_product_id),
+);
+
+const [requiredProductId, setRequiredProductId] = React.useState<string | null>(
+  offerCode?.required_product_id ?? null,
+);
+
+const [requiredProductMaxAgeMonths, setRequiredProductMaxAgeMonths] =
+  React.useState<number | null>(
+    offerCode?.required_product_max_age_months ?? null,
+  );
+
   const handleSubmit = () => {
     const isNameInvalid = name.value === "";
     const isCodeInvalid = code.value === "";
@@ -870,6 +890,10 @@ const Form = ({
       minimum_quantity: hasMinimumQuantity ? minimumQuantity.value : null,
       duration_in_billing_cycles: canSetDuration ? durationInBillingCycles : null,
       minimum_amount_cents: hasMinimumAmount ? minimumAmount.value : null,
+      required_product_id: hasRequiredProduct ? requiredProductId : null,
+      required_product_max_age_months: hasRequiredProduct
+        ? requiredProductMaxAgeMonths
+        : null,
     });
   };
 
@@ -1200,6 +1224,76 @@ const Form = ({
                 </fieldset>
               </div>
             </Details>
+          <Details
+            className="toggle"
+            open={hasRequiredProduct}
+            summary={
+              <label>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={hasRequiredProduct}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setHasRequiredProduct(checked);
+
+                    if (!checked) {
+                      setRequiredProductId(null);
+                      setRequiredProductMaxAgeMonths(null);
+                    }
+                  }}
+                />
+                Require previous product (upgrade discount)
+              </label>
+            }
+          >
+            <div className="dropdown">
+              <fieldset>
+                <legend>
+                  <label>Required product</label>
+                </legend>
+          <Select
+            options={products
+              .filter((p) => !p.archived)
+              .map((p) => ({ id: p.id, label: p.name }))}
+            value={
+              requiredProductId
+                ? (() => {
+                    const product = products.find((p) => p.id === requiredProductId);
+                    return product ? { id: product.id, label: product.name } : null;
+                  })()
+                : null
+            }
+            isClearable
+            placeholder="Select a product"
+            onChange={(option) => {
+              if (!option || Array.isArray(option)) {
+                setRequiredProductId(null);
+                return;
+              }
+              setRequiredProductId((option as { id: string }).id);
+            }}
+          />
+              </fieldset>
+
+              <fieldset>
+                <legend>
+                  <label>Ownership limit (months)</label>
+                </legend>
+                <NumberInput
+                  value={requiredProductMaxAgeMonths}
+                  onChange={(value) => {
+                    if (value === null || value > 0) {
+                      setRequiredProductMaxAgeMonths(value);
+                    }
+                  }}
+                >
+                  {(props) => <input {...props} placeholder="e.g. 6" />}
+                </NumberInput>
+              </fieldset>
+            </div>
+          </Details>
+
           </fieldset>
         </section>
       </form>
