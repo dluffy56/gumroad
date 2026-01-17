@@ -42,18 +42,6 @@ class OfferCodeDiscountComputingService
         end
       end
 
-      unless eligible_for_required_product?(offer_code)
-        return {
-          products_data: {},
-          error_code: :missing_required_product,
-          required_product_name: offer_code.required_product&.name,
-          required_product_permalink: offer_code.required_product&.unique_permalink,
-          max_age_months: offer_code.required_product_max_age_months
-        }
-
-
-      end
-
       if eligible?(offer_code, purchase_quantity)
         track_usage(offer_code, purchase_quantity)
         discount = if tier
@@ -64,10 +52,10 @@ class OfferCodeDiscountComputingService
           { type: "cents", value: tier_discount[:cents] }
         end
       else
-        offer_code.discount  # Original discount if no required product
+        offer_code.discount
       end
-        products_data[link.unique_permalink] = { discount: offer_code.discount }
-        optimistically_apply_to_applicable_cross_sells(products_data, link)
+      products_data[link.unique_permalink] = { discount: discount }
+      optimistically_apply_to_applicable_cross_sells(products_data, link)
       else
         track_ineligibility(offer_code, purchase_quantity)
       end
@@ -183,17 +171,5 @@ class OfferCodeDiscountComputingService
 
         products_data[cross_sell.product.unique_permalink] = { discount: offer_code.discount }
       end
-    end
-
-    def eligible_for_required_product?(offer_code)
-      return true unless offer_code.required_product_id.present?
-
-      return false unless purchaser_email.present?
-
-      if @logged_in_user && purchaser_email != @logged_in_user.email
-        Rails.logger.warn("[SECURITY] Email mismatch: session=#{@logged_in_user.email}, claimed=#{purchaser_email}")
-        return false
-      end
-      offer_code.meets_required_product_requirement?(purchaser_email: purchaser_email)
     end
 end
