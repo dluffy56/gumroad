@@ -674,6 +674,8 @@ const DiscountsPage = ({
             minimumAmount: offerCode.minimum_amount_cents,
             requiredProductId: offerCode.required_product_id,
             requiredProductMaxAgeMonths: offerCode.required_product_max_age_months,
+            fallbackAmountPercentage: offerCode.fallback_amount_percentage,
+            fallbackAmountCents: offerCode.fallback_amount_cents,
           });
           resetQueryState();
           setState({ offerCodes, pagination });
@@ -719,6 +721,8 @@ const DiscountsPage = ({
             minimumAmount: offerCode.minimum_amount_cents,
             requiredProductId: offerCode.required_product_id,
             requiredProductMaxAgeMonths: offerCode.required_product_max_age_months,
+            fallbackAmountPercentage: offerCode.fallback_amount_percentage,
+            fallbackAmountCents: offerCode.fallback_amount_cents,
 
           });
           resetQueryState();

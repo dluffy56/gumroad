@@ -61,6 +61,8 @@ type DiscountPayload = {
   minimumAmount: number | null;
   requiredProductId?: string | null;
   requiredProductMaxAgeMonths?: number | null;
+  fallbackAmountPercentage?: number | null;
+  fallbackAmountCents?: number | null;
 };
 
 export const getPagedDiscounts = (page: number, query: string | null, sort: Sort<SortKey> | null) => {
@@ -95,6 +97,8 @@ export const createDiscount = async ({
   minimumAmount,
   requiredProductId,
   requiredProductMaxAgeMonths,
+  fallbackAmountPercentage,
+  fallbackAmountCents,
 }: DiscountPayload) => {
   const response = await request({
     method: "POST",
@@ -116,6 +120,8 @@ export const createDiscount = async ({
       minimum_amount_cents: minimumAmount,
       required_product_id: requiredProductId,
       required_product_max_age_months: requiredProductMaxAgeMonths,
+      fallback_amount_percentage: fallbackAmountPercentage,
+      fallback_amount_cents: fallbackAmountCents,
     },
   });
   const responseData = cast<
@@ -142,6 +148,8 @@ export const updateDiscount = async (
     minimumAmount,
     requiredProductId,
     requiredProductMaxAgeMonths,
+    fallbackAmountPercentage,
+    fallbackAmountCents,
   }: DiscountPayload,
 ) => {
   const response = await request({
@@ -164,6 +172,8 @@ export const updateDiscount = async (
       minimum_amount_cents: minimumAmount,
       required_product_id: requiredProductId,
       required_product_max_age_months: requiredProductMaxAgeMonths,
+      fallback_amount_percentage: fallbackAmountPercentage,
+      fallback_amount_cents: fallbackAmountCents,
     },
   });
   const responseData = cast<

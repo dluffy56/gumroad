@@ -27,6 +27,21 @@ class OfferCodeDiscountComputingService
       next unless offer_code
       track_applicable_offer_code(offer_code)
 
+      tier = nil
+      if offer_code.required_product_id.present?
+        tier = offer_code.eligibility_tier_for(purchaser_email: purchaser_email)
+
+        unless tier
+          return {
+            products_data: {},
+            error_code: :missing_required_product,
+            required_product_name: offer_code.required_product&.name,
+            required_product_permalink: offer_code.required_product&.unique_permalink,
+            max_age_months: offer_code.required_product_max_age_months
+          }
+        end
+      end
+
       unless eligible_for_required_product?(offer_code)
         return {
           products_data: {},
@@ -41,6 +56,16 @@ class OfferCodeDiscountComputingService
 
       if eligible?(offer_code, purchase_quantity)
         track_usage(offer_code, purchase_quantity)
+        discount = if tier
+        tier_discount = offer_code.discount_for_tier(tier)
+        if tier_discount[:percentage]
+          { type: "percent", value: tier_discount[:percentage] }
+        else
+          { type: "cents", value: tier_discount[:cents] }
+        end
+      else
+        offer_code.discount  # Original discount if no required product
+      end
         products_data[link.unique_permalink] = { discount: offer_code.discount }
         optimistically_apply_to_applicable_cross_sells(products_data, link)
       else

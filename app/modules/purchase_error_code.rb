@@ -25,6 +25,7 @@ module PurchaseErrorCode
   OFFER_CODE_INSUFFICIENT_QUANTITY = "offer_code_insufficient_quantity"
   OFFER_CODE_INVALID = "offer_code_invalid"
   OFFER_CODE_SOLD_OUT = "offer_code_sold_out"
+  OFFER_CODE_MISSING_REQUIRED_PRODUCT = "offer_code_missing_required_product"
   EXCEEDING_OFFER_CODE_QUANTITY = "exceeding_offer_code_quantity"
   SUBSCRIPTION_INACTIVE = "subscription_inactive"
   PERCEIVED_PRICE_CENTS_NOT_MATCHING = "perceived_price_cents_not_matching"
@@ -49,7 +50,7 @@ module PurchaseErrorCode
   NET_NEGATIVE_SELLER_REVENUE = "net_negative_seller_revenue"
   CARD_DECLINED_FRAUDULENT = "card_declined_fraudulent"
   BRAZILIAN_MERCHANT_ACCOUNT_WITH_AFFILIATE = "brazilian_merchant_account_with_affiliate"
-
+  OFFER_CODE_MISSING_REQUIRED_PRODUCT = "offer_code_missing_required_product"
   PAYPAL_ERROR_CODES = {
     "2000" => "Do Not Honor",
     "2001" => "Insufficient Funds",
