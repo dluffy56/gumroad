@@ -50,7 +50,6 @@ module PurchaseErrorCode
   NET_NEGATIVE_SELLER_REVENUE = "net_negative_seller_revenue"
   CARD_DECLINED_FRAUDULENT = "card_declined_fraudulent"
   BRAZILIAN_MERCHANT_ACCOUNT_WITH_AFFILIATE = "brazilian_merchant_account_with_affiliate"
-  OFFER_CODE_MISSING_REQUIRED_PRODUCT = "offer_code_missing_required_product"
   PAYPAL_ERROR_CODES = {
     "2000" => "Do Not Honor",
     "2001" => "Insufficient Funds",

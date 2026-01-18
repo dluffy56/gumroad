@@ -230,7 +230,7 @@ class OfferCode < ApplicationRecord
     purchase = find_required_product_purchase(purchaser_email)
     return nil unless purchase
 
-    return nil unless required_product_max_age_months.present?
+    return :primary unless required_product_max_age_months.present?
 
     cutoff_date = Time.current - required_product_max_age_months.months
 
@@ -368,7 +368,7 @@ class OfferCode < ApplicationRecord
       end
       scope = scope.where(refunded_at: nil, disputed_at: nil)
       scope = scope.where.not(status: 'canceled') if Purchase.column_names.include?("status")
-      scope.order(created_at: :asc).first
+      scope.order(created_at: :desc).first
     end
 
     def required_product_belongs_to_same_seller
