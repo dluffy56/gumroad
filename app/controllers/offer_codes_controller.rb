@@ -3,7 +3,7 @@
 class OfferCodesController < ApplicationController
   def compute_discount
     purchaser_email = logged_in_user&.email || params[:email]
-    response = OfferCodeDiscountComputingService.new(params[:code], params[:products], purchaser_email: purchaser_email).process
+    response = OfferCodeDiscountComputingService.new(arams[: code], params[:products], purchaser_email: purchaser_email).process
     response = if response[:error_code].present?
       error_message = case response.fetch(:error_code)
                       when :missing_required_product

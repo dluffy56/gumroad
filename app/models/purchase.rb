@@ -3378,14 +3378,18 @@ class Purchase < ApplicationRecord
       end
 
       if offer_code.required_product_id.present?
-        unless offer_code.meets_required_product_requirement?(purchaser_email: email)
-          self.error_code = PurchaseErrorCode::OFFER_CODE_MISSING_REQUIRED_PRODUCT
-          errors.add(
+        tier = offer_code.eligibility_tier_for(purchaser_email: email)
+
+        unless tier
+          self.error_code = PurchaseErrorCode:: OFFER_CODE_MISSING_REQUIRED_PRODUCT
+          errors. add(
             :base,
             "Sorry, this discount code requires you to own a specific product first."
           )
           return
         end
+
+        @offer_code_tier = tier
       end
 
       return if offer_code.is_valid_for_purchase?(purchase_quantity: quantity)

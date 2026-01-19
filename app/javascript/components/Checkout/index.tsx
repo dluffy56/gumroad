@@ -106,20 +106,27 @@ export const Checkout = ({
 
   async function applyDiscount(code: string, fromUrl = false) {
     setLoadingDiscount(true);
-    const discount = await computeOfferDiscount({
+    const discountRequest:  Parameters<typeof computeOfferDiscount>[0] = {
       code,
       products: Object.fromEntries(
         cart.items.map((item) => [
           item.product.permalink,
-          { permalink: item.product.permalink, quantity: item.quantity },
+          { permalink: item.product. permalink, quantity: item.quantity },
         ]),
       ),
-    });
+    };
+
+    if (state.email) {
+      discountRequest.email = state.email;
+    }
+
+    const discount = await computeOfferDiscount(discountRequest);
+
     if (discount.valid) {
-      const entries = Object.entries(discount.products_data);
+      const entries = Object.entries(discount. products_data);
       const pppDiscountGreaterCount = entries.reduce((acc, [permalink, discount]) => {
         const item = cart.items.find(({ product }) => product.permalink === permalink);
-        return item && computeDiscountedPrice(item.price, discount, item.product).ppp ? acc + 1 : acc;
+        return item && computeDiscountedPrice(item.price, discount, item.product).ppp ? acc + 1 :  acc;
       }, 0);
       if (pppDiscountGreaterCount === entries.length) {
         showAlert(
@@ -142,13 +149,20 @@ export const Checkout = ({
                   Object.entries(item.products).filter(([permalink]) => !(permalink in discount.products_data)),
                 ),
               }))
-              .filter((item) => item.code !== code && Object.keys(item.products).length > 0),
+              .filter((item) => item.code !== code && Object.keys(item. products).length > 0),
           ],
         });
       }
       setNewDiscountCode("");
     } else {
-      showAlert(discount.error_message, "error");
+      if (discount.error_code === 'missing_required_product' && ! state.email) {
+        showAlert(
+          "Please enter your email address to use this discount code.",
+          "error"
+        );
+      } else {
+        showAlert(discount.error_message, "error");
+      }
     }
 
     setLoadingDiscount(false);

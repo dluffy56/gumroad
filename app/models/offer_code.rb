@@ -212,7 +212,7 @@ class OfferCode < ApplicationRecord
 
   def meets_required_product_requirement?(purchaser_email:)
     return true unless required_product_id.present?
-    return true if purchaser_email.blank?
+    return false if purchaser_email.blank?
 
     purchase = find_required_product_purchase(purchaser_email)
     return false unless purchase
@@ -220,7 +220,7 @@ class OfferCode < ApplicationRecord
     return true unless required_product_max_age_months.present?
 
     months_owned = ((Time.current - purchase.created_at) / 1.month).floor
-    months_owned >= required_product_max_age_months
+    months_owned < required_product_max_age_months
   end
 
   def eligibility_tier_for(purchaser_email:)
@@ -230,17 +230,22 @@ class OfferCode < ApplicationRecord
     purchase = find_required_product_purchase(purchaser_email)
     return nil unless purchase
 
-    return :primary unless required_product_max_age_months.present?
+    return :primary unless required_product_max_age_months. present?
 
-    cutoff_date = Time.current - required_product_max_age_months.months
+    months_owned = ((Time.current - purchase.created_at) / 1.month).floor
+    cutoff_months = required_product_max_age_months
 
-    if purchase.created_at >= cutoff_date
+    if months_owned < cutoff_months
       :primary
     elsif fallback_amount_percentage || fallback_amount_cents
       :fallback
     else
       nil
     end
+  end
+  
+  def meets_required_product_requirement?(purchaser_email:)
+    eligibility_tier_for(purchaser_email:  purchaser_email).present?
   end
 
   def discount_for_tier(tier)
@@ -358,13 +363,12 @@ class OfferCode < ApplicationRecord
     end
 
     def find_required_product_purchase(purchaser_email)
-      user = User.find_by(email: purchaser_email)
-
+      user = User.find_by(email: purchaser_email.downcase)
       scope = Purchase.successful.where(link_id: required_product_id)
       scope = if user
-        scope.where("purchaser_id = ? OR email = ?", user.id, purchaser_email)
+        scope.where("purchaser_id = ? OR LOWER(email) = ?", user.id, purchaser_email.downcase)
       else
-        scope.where(email: purchaser_email)
+        scope.where("LOWER(email) = ?", purchaser_email.downcase)
       end
       scope = scope.where(refunded_at: nil, disputed_at: nil)
       scope = scope.where.not(status: 'canceled') if Purchase.column_names.include?("status")

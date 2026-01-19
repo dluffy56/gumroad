@@ -17,6 +17,7 @@ export type LineItemConfiguration = {
 type ComputeDiscountRequestData = {
   code: string;
   products: Record<Uid, LineItemConfiguration>;
+  email?: string;
 };
 
 export const computeOfferDiscount = async (payload: ComputeDiscountRequestData): Promise<OfferCodeResponseData> => {
@@ -24,7 +25,7 @@ export const computeOfferDiscount = async (payload: ComputeDiscountRequestData):
     const response = await request({
       method: "GET",
       accept: "json",
-      url: Routes.compute_discount_offer_codes_path(payload),
+      url: Routes.compute_discount_offer_codes_path({ ...payload }),
     });
     if (response.ok) {
       return cast<OfferCodeResponseData>(await response.json());
@@ -43,7 +44,7 @@ export type OfferCodeResponseData =
         | "inactive"
         | "unmet_minimum_purchase_quantity"
         | "missing_required_product";
-        
+
       error_message: string;
     }
   | { valid: true; products_data: Record<string, Discount> };
