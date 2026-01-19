@@ -3381,8 +3381,8 @@ class Purchase < ApplicationRecord
         tier = offer_code.eligibility_tier_for(purchaser_email: email)
 
         unless tier
-          self.error_code = PurchaseErrorCode:: OFFER_CODE_MISSING_REQUIRED_PRODUCT
-          errors. add(
+          self.error_code = PurchaseErrorCode::OFFER_CODE_MISSING_REQUIRED_PRODUCT
+          errors.add(
             :base,
             "Sorry, this discount code requires you to own a specific product first."
           )

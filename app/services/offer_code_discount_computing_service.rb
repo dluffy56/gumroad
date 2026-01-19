@@ -80,7 +80,7 @@ class OfferCodeDiscountComputingService
       return OfferCode.none if code.blank?
 
       @_offer_codes ||= OfferCode
-        .includes(:products)
+        .includes(:products, :required_product)
         .where(user_id: links.map(&:user_id), code:)
         .alive
     end

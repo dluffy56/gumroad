@@ -210,19 +210,6 @@ class OfferCode < ApplicationRecord
     attr == "code" ? "Discount code" : super
   end
 
-  def meets_required_product_requirement?(purchaser_email:)
-    return true unless required_product_id.present?
-    return false if purchaser_email.blank?
-
-    purchase = find_required_product_purchase(purchaser_email)
-    return false unless purchase
-
-    return true unless required_product_max_age_months.present?
-
-    months_owned = ((Time.current - purchase.created_at) / 1.month).floor
-    months_owned < required_product_max_age_months
-  end
-
   def eligibility_tier_for(purchaser_email:)
     return nil unless required_product_id.present?
     return nil if purchaser_email.blank?
@@ -230,7 +217,7 @@ class OfferCode < ApplicationRecord
     purchase = find_required_product_purchase(purchaser_email)
     return nil unless purchase
 
-    return :primary unless required_product_max_age_months. present?
+    return :primary unless required_product_max_age_months.present?
 
     months_owned = ((Time.current - purchase.created_at) / 1.month).floor
     cutoff_months = required_product_max_age_months
@@ -243,17 +230,54 @@ class OfferCode < ApplicationRecord
       nil
     end
   end
-  
+
   def meets_required_product_requirement?(purchaser_email:)
     eligibility_tier_for(purchaser_email:  purchaser_email).present?
+  end
+
+  validate :fallback_discount_requires_max_age_months
+
+  def fallback_discount_requires_max_age_months
+    return unless fallback_amount_percentage.present?  || fallback_amount_cents. present?
+
+    if required_product_id.blank?
+      errors.add(:base, "Fallback discount requires a required product to be selected")
+    end
+
+    if required_product_max_age_months.blank?
+      errors.add(:base, "Fallback discount requires 'Only if purchased within X months' to be set")
+    end
+  end
+
+  validate :validate_fallback_discount_type
+
+  def validate_fallback_discount_type
+    if fallback_amount_percentage.present? && fallback_amount_cents.present?
+      errors.add(:base, "Choose either a percentage or fixed amount for fallback discount, not both")
+    end
+    if fallback_amount_percentage.present?  || fallback_amount_cents.present?
+      if amount_percentage.present?  && fallback_amount_cents.present?
+        errors.add(:base, "Fallback discount must be a percentage to match the primary discount (#{amount_percentage}%)")
+      elsif amount_cents. present? && fallback_amount_percentage.present?
+        errors. add(:base, "Fallback discount must be a fixed amount to match the primary discount ($#{amount_cents})")
+      end
+    end
   end
 
   def discount_for_tier(tier)
     case tier
     when :primary
-      { percentage: amount_percentage, cents: amount_cents }
+      if amount_percentage.present?
+        { percentage: amount_percentage }
+      else
+        { cents: amount_cents }
+      end
     when :fallback
-      { percentage: fallback_amount_percentage, cents: fallback_amount_cents }
+      if fallback_amount_percentage. present?
+        { percentage: fallback_amount_percentage }
+      else
+        { cents: fallback_amount_cents }
+      end
     else
       nil
     end
@@ -363,15 +387,16 @@ class OfferCode < ApplicationRecord
     end
 
     def find_required_product_purchase(purchaser_email)
-      user = User.find_by(email: purchaser_email.downcase)
+      normalized_email = purchaser_email.downcase
+      user = User.find_by(email: normalized_email)
       scope = Purchase.successful.where(link_id: required_product_id)
       scope = if user
-        scope.where("purchaser_id = ? OR LOWER(email) = ?", user.id, purchaser_email.downcase)
+        scope.where("purchaser_id = ? OR LOWER(email) = ?", user.id, normalized_email)  # ✅
       else
-        scope.where("LOWER(email) = ?", purchaser_email.downcase)
+        scope.where("LOWER(email) = ?", normalized_email)
       end
       scope = scope.where(refunded_at: nil, disputed_at: nil)
-      scope = scope.where.not(status: 'canceled') if Purchase.column_names.include?("status")
+      scope = scope.where. not(status: 'canceled') if Purchase.column_names.include?("status")
       scope.order(created_at: :desc).first
     end
 
