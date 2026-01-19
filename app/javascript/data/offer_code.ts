@@ -41,7 +41,9 @@ export type OfferCodeResponseData =
         | "invalid_offer"
         | "insufficient_times_of_use"
         | "inactive"
-        | "unmet_minimum_purchase_quantity";
+        | "unmet_minimum_purchase_quantity"
+        | "missing_required_product";
+        
       error_message: string;
     }
   | { valid: true; products_data: Record<string, Discount> };

@@ -220,7 +220,7 @@ class OfferCode < ApplicationRecord
     return true unless required_product_max_age_months.present?
 
     months_owned = ((Time.current - purchase.created_at) / 1.month).floor
-    months_owned < required_product_max_age_months
+    months_owned >= required_product_max_age_months
   end
 
   def eligibility_tier_for(purchaser_email:)

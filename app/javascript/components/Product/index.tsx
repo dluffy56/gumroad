@@ -165,7 +165,7 @@ export type Purchase = {
   membership: { tier_name: string | null; tier_description: string | null; manage_url: string } | null;
 };
 export type ProductDiscount =
-  | { valid: false; error_code: "sold_out" | "invalid_offer" | "inactive" | "unmet_minimum_purchase_quantity" }
+  | { valid: false; error_code: "sold_out" | "invalid_offer" | "inactive" | "unmet_minimum_purchase_quantity"   | "missing_required_product"; error_message?: string }
   | { valid: true; code: string; discount: Discount }
   | null;
 
@@ -509,13 +509,19 @@ export const Product = ({
                 </Alert>
               ) : null
             ) : (
-              <Alert role="status" variant="danger">
-                {discountCode.error_code === "sold_out"
-                  ? "Sorry, the discount code you wish to use has expired."
-                  : discountCode.error_code === "invalid_offer"
-                    ? "Sorry, the discount code you wish to use is invalid."
-                    : "Sorry, the discount code you wish to use is inactive."}
-              </Alert>
+             <Alert role="status" variant="danger">
+              {discountCode.error_message
+                ? discountCode.error_message
+                : discountCode.error_code === "sold_out"
+                ? "Sorry, the discount code you wish to use has expired."
+                : discountCode.error_code === "invalid_offer"
+                ? "Sorry, the discount code you wish to use is invalid."
+                : discountCode.error_code === "missing_required_product"
+                ? "Sorry, the discount code requires you to own a specific product first."
+                : discountCode.error_code === "unmet_minimum_purchase_quantity"
+                ? "Sorry, this discount requires a minimum quantity."
+                : "Sorry, the discount code you wish to use is inactive."}
+             </Alert>
             )
           ) : null}
           <ConfigurationSelector

@@ -56,6 +56,7 @@ class Checkout::DiscountsController < Sellers::BaseController
 
     attrs = offer_code_params.except(:selected_product_ids)
 
+    attrs[:valid_at] = attrs[:valid_at].presence || Time.current
     if attrs[:required_product_id].present?
       required_product = current_seller.products.find_by_external_id!(attrs[:required_product_id])
       attrs[:required_product_id] = required_product.id
