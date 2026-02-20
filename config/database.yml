@@ -60,25 +60,7 @@ staging: &staging
       <% end %>
 
 production:
-  <<: *staging
-
-  makara:
-    id: mysql
-    connections:
-      - role: primary
-        host: <%= ENV.fetch("DATABASE_HOST") %>
-        name: primary
-      <% if ENV["USE_DB_WORKER_REPLICAS"] == "true" %>
-      - role: replica
-        database: <%= ENV["DATABASE_WORKER_REPLICA1_NAME"] %>
-        username: <%= ENV["DATABASE_WORKER_REPLICA1_USERNAME"] %>
-        password: <%= ENV["DATABASE_WORKER_REPLICA1_PASSWORD"] %>
-        host: <%= ENV["DATABASE_WORKER_REPLICA1_HOST"] %>
-        name: Worker Replica 1
-      - role: replica
-        database: <%= ENV["DATABASE_WORKER_REPLICA2_NAME"] %>
-        username: <%= ENV["DATABASE_WORKER_REPLICA2_USERNAME"] %>
-        password: <%= ENV["DATABASE_WORKER_REPLICA2_PASSWORD"] %>
-        host: <%= ENV["DATABASE_WORKER_REPLICA2_HOST"] %>
-        name: Worker Replica 2
-      <% end %>
+  adapter: sqlite3
+  database: db/production.sqlite3
+  pool: 5
+  timeout: 5000
