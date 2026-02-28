@@ -579,13 +579,18 @@ describe "Sales page", type: :system, js: true do
           within_section "Send missed posts (11)", section_element: :section do
             expect(page).to have_button("Send all")
             click_on "Send all"
+            expect(page).to have_button("Sending...", disabled: true)
+          end
+        end
+        expect(page).to have_alert(text: "Sending 11 posts...")
+        within_modal "Product 1" do
+          within_section "Send missed posts (11)", section_element: :section do
             expect(page).to have_button("Sent all", disabled: true)
             within_section "Post 0" do
               expect(page).to have_button("Sent", disabled: true)
             end
           end
         end
-        expect(page).to have_alert(text: "Sending 11 posts...")
       end
 
       it "does not show Send all button when there is only one missed post" do
