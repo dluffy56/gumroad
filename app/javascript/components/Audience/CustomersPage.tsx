@@ -726,24 +726,19 @@ const CustomerDrawer = ({
     setLoadingId(null);
   };
 
-  const [isSendingAll, setIsSendingAll] = React.useState(false);
-  const onSendAll = async () => {
+  const onSendAll = () => {
     if (!missedPosts) return;
     const unsent = missedPosts.filter((post) => !sentEmailIds.current.has(post.id));
     if (unsent.length === 0) return;
-    setIsSendingAll(true);
+    for (const post of unsent) {
+      sentEmailIds.current.add(post.id);
+    }
+    setSentAll(true);
     showAlert(`Sending ${String(unsent.length)} post${unsent.length === 1 ? "" : "s"}...`, "success");
-    try {
-      await Promise.all(unsent.map((post) => resendPost(customer.id, post.id)));
-      for (const post of unsent) {
-        sentEmailIds.current.add(post.id);
-      }
-      setSentAll(true);
-    } catch (e) {
+    void Promise.all(unsent.map((post) => resendPost(customer.id, post.id))).catch((e: unknown) => {
       assertResponseError(e);
       showAlert(e.message, "error");
-    }
-    setIsSendingAll(false);
+    });
   };
 
   const [productPurchases, setProductPurchases] = React.useState<Customer[]>([]);
@@ -1267,19 +1262,12 @@ const CustomerDrawer = ({
                 {missedPosts && missedPosts.length > 1 ? (
                   <Button
                     color="primary"
-                    disabled={
-                      !!loadingId ||
-                      isSendingAll ||
-                      sentAll ||
-                      missedPosts.every((post) => sentEmailIds.current.has(post.id))
-                    }
-                    onClick={() => void onSendAll()}
+                    disabled={!!loadingId || sentAll || missedPosts.every((post) => sentEmailIds.current.has(post.id))}
+                    onClick={onSendAll}
                   >
                     {sentAll || missedPosts.every((post) => sentEmailIds.current.has(post.id))
                       ? "Sent all"
-                      : isSendingAll
-                        ? "Sending..."
-                        : "Send all"}
+                      : "Send all"}
                   </Button>
                 ) : null}
               </header>
@@ -1299,7 +1287,7 @@ const CustomerDrawer = ({
                       </div>
                       <Button
                         color="primary"
-                        disabled={!!loadingId || isSendingAll || sentEmailIds.current.has(post.id)}
+                        disabled={!!loadingId || sentEmailIds.current.has(post.id)}
                         onClick={() => void onSend(post.id, "post")}
                       >
                         {sentEmailIds.current.has(post.id) ? "Sent" : loadingId === post.id ? "Sending...." : "Send"}
