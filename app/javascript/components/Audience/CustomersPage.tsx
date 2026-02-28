@@ -686,6 +686,7 @@ const CustomerDrawer = ({
   const [emails, setEmails] = React.useState<CustomerEmail[] | null>(null);
   const [shownEmails, setShownEmails] = React.useState(PAGE_SIZE);
   const sentEmailIds = React.useRef<Set<string>>(new Set());
+  const [sentAll, setSentAll] = React.useState(false);
   useRunOnce(() => {
     getMissedPosts(customer.id, customer.email).then(setMissedPosts, (e: unknown) => {
       assertResponseError(e);
@@ -708,6 +709,18 @@ const CustomerDrawer = ({
       showAlert(e.message, "error");
     }
     setLoadingId(null);
+  };
+
+  const onSendAll = () => {
+    if (!missedPosts) return;
+    const unsent = missedPosts.filter((post) => !sentEmailIds.current.has(post.id));
+    if (unsent.length === 0) return;
+    for (const post of unsent) {
+      sentEmailIds.current.add(post.id);
+    }
+    setSentAll(true);
+    showAlert(`Sending ${String(unsent.length)} post${unsent.length === 1 ? "" : "s"}...`, "success");
+    void Promise.allSettled(unsent.map((post) => resendPost(customer.id, post.id)));
   };
 
   const [productPurchases, setProductPurchases] = React.useState<Customer[]>([]);
@@ -1227,7 +1240,24 @@ const CustomerDrawer = ({
           <section>
             <CardContent asChild>
               <header>
-                <h3 className="grow">Send missed posts</h3>
+                <h3 className="grow">
+                  {`Send missed posts${missedPosts ? ` (${String(missedPosts.length)})` : ""}`}
+                </h3>
+                {missedPosts && missedPosts.length > 1 ? (
+                  <Button
+                    color="primary"
+                    disabled={
+                      !!loadingId ||
+                      sentAll ||
+                      missedPosts.every((post) => sentEmailIds.current.has(post.id))
+                    }
+                    onClick={onSendAll}
+                  >
+                    {sentAll || missedPosts.every((post) => sentEmailIds.current.has(post.id))
+                      ? "Sent all"
+                      : "Send all"}
+                  </Button>
+                ) : null}
               </header>
             </CardContent>
             {missedPosts ? (
