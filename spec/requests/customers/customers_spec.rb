@@ -513,7 +513,7 @@ describe "Sales page", type: :system, js: true do
         visit customers_path
         find(:table_row, { "Name" => "Customer 1" }).click
         within_modal "Product 1" do
-          within_section "Send missed posts", section_element: :section do
+          within_section "Send missed posts (11)", section_element: :section do
             10.times do |i|
               expect(page).to have_section("Post #{i}")
             end
@@ -535,7 +535,7 @@ describe "Sales page", type: :system, js: true do
         visit customers_path
         find(:table_row, { "Name" => "Customer 1" }).click
         within_modal "Product 1" do
-          within_section "Send missed posts", section_element: :section do
+          within_section "Send missed posts (10)", section_element: :section do
             expect(page).to_not have_button("Show more")
             expect(page).to_not have_section("Post 10")
           end
@@ -556,7 +556,7 @@ describe "Sales page", type: :system, js: true do
         visit customers_path
         find(:table_row, { "Name" => "Customer 1" }).click
         within_modal "Product 1" do
-          within_section "Send missed posts", section_element: :section do
+          within_section "Send missed posts (11)", section_element: :section do
             click_on "Show more"
             within_section "Post 10" do
               click_on "Send"
@@ -577,8 +577,8 @@ describe "Sales page", type: :system, js: true do
         find(:table_row, { "Name" => "Customer 1" }).click
         within_modal "Product 1" do
           within_section "Send missed posts (11)", section_element: :section do
-            expect(page).to have_button("Send all")
-            click_on "Send all"
+            expect(page).to have_button("Send all (11)")
+            click_on "Send all (11)"
             expect(page).to have_button("Sent all", disabled: true)
             within_section "Post 0" do
               expect(page).to have_button("Sent", disabled: true)
@@ -594,9 +594,9 @@ describe "Sales page", type: :system, js: true do
         visit customers_path
         find(:table_row, { "Name" => "Customer 1" }).click
         within_modal "Product 1" do
-          within_section "Send missed posts", section_element: :section do
+          within_section "Send missed posts (1)", section_element: :section do
             expect(page).to have_button("Send")
-            expect(page).to_not have_button("Send all")
+            expect(page).to_not have_button("Send all (1)")
           end
         end
       end

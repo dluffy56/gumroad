@@ -735,9 +735,15 @@ const CustomerDrawer = ({
     }
     setSentAll(true);
     showAlert(`Sending ${String(unsent.length)} post${unsent.length === 1 ? "" : "s"}...`, "success");
-    void Promise.all(unsent.map((post) => resendPost(customer.id, post.id))).catch((e: unknown) => {
-      assertResponseError(e);
-      showAlert(e.message, "error");
+    void Promise.allSettled(unsent.map((post) => resendPost(customer.id, post.id))).then((results) => {
+      const failed = unsent.filter((_, i) => results[i]?.status === "rejected");
+      if (failed.length > 0) {
+        for (const post of failed) {
+          sentEmailIds.current.delete(post.id);
+        }
+        setSentAll(false);
+        showAlert(`${String(failed.length)} post${failed.length === 1 ? "" : "s"} failed to send`, "error");
+      }
     });
   };
 
@@ -1267,7 +1273,7 @@ const CustomerDrawer = ({
                   >
                     {sentAll || missedPosts.every((post) => sentEmailIds.current.has(post.id))
                       ? "Sent all"
-                      : "Send all"}
+                      : `Send all (${String(missedPosts.length)})`}
                   </Button>
                 ) : null}
               </header>
