@@ -577,11 +577,11 @@ describe "Sales page", type: :system, js: true do
         find(:table_row, { "Name" => "Customer 1" }).click
         within_modal "Product 1" do
           within_section "Send missed posts (11)", section_element: :section do
-            expect(page).to have_button("Send all (11)")
-            click_on "Send all (11)"
-            expect(page).to have_button("Sending...", disabled: true)
+            expect(page).to have_button("Send all")
+            click_on "Send all"
+            expect(page).to have_button("Sending....", disabled: true)
             within_section "Post 0" do
-              expect(page).to have_button("Sending...", disabled: true)
+              expect(page).to have_button("Sending....", disabled: true)
             end
             expect(page).to have_button("Sent all", disabled: true)
             within_section "Post 0" do
@@ -600,7 +600,7 @@ describe "Sales page", type: :system, js: true do
         within_modal "Product 1" do
           within_section "Send missed posts (1)", section_element: :section do
             expect(page).to have_button("Send")
-            expect(page).to_not have_button("Send all (1)")
+            expect(page).to_not have_button("Send all")
           end
         end
       end

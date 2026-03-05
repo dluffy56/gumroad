@@ -1277,8 +1277,8 @@ const CustomerDrawer = ({
                     {sentAll || missedPosts.every((post) => sentEmailIds.current.has(post.id))
                       ? "Sent all"
                       : sendingAll
-                        ? "Sending..."
-                        : `Send all (${String(missedPosts.length)})`}
+                        ? "Sending...."
+                        : "Send all"}
                   </Button>
                 ) : null}
               </header>
