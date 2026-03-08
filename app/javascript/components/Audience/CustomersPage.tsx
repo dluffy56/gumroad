@@ -1279,7 +1279,12 @@ const CustomerDrawer = ({
                 {missedPosts && missedPosts.length > 1 ? (
                   <Button
                     color="primary"
-                    disabled={!!loadingId || sendingAll || sentAll || missedPosts.every((post) => sentEmailIds.current.has(post.id))}
+                    disabled={
+                      !!loadingId ||
+                      sendingAll ||
+                      sentAll ||
+                      missedPosts.every((post) => sentEmailIds.current.has(post.id))
+                    }
                     onClick={onSendAll}
                   >
                     {sentAll || missedPosts.every((post) => sentEmailIds.current.has(post.id))
@@ -1309,7 +1314,11 @@ const CustomerDrawer = ({
                         disabled={!!loadingId || sendingAll || sentEmailIds.current.has(post.id)}
                         onClick={() => void onSend(post.id, "post")}
                       >
-                        {sentEmailIds.current.has(post.id) ? "Sent" : sendingAll || loadingId === post.id ? "Sending..." : "Send"}
+                        {sentEmailIds.current.has(post.id)
+                          ? "Sent"
+                          : sendingAll || loadingId === post.id
+                            ? "Sending..."
+                            : "Send"}
                       </Button>
                     </section>
                   </CardContent>
