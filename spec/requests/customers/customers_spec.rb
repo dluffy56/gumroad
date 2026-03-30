@@ -513,7 +513,7 @@ describe "Sales page", type: :system, js: true do
         visit customers_path
         find(:table_row, { "Name" => "Customer 1" }).click
         within_modal "Product 1" do
-          within_section "Send missed posts", section_element: :section do
+          within_section "Send missed posts (11)", section_element: :section do
             10.times do |i|
               expect(page).to have_section("Post #{i}")
             end
@@ -535,7 +535,7 @@ describe "Sales page", type: :system, js: true do
         visit customers_path
         find(:table_row, { "Name" => "Customer 1" }).click
         within_modal "Product 1" do
-          within_section "Send missed posts", section_element: :section do
+          within_section "Send missed posts (10)", section_element: :section do
             expect(page).to_not have_button("Show more")
             expect(page).to_not have_section("Post 10")
           end
@@ -556,7 +556,7 @@ describe "Sales page", type: :system, js: true do
         visit customers_path
         find(:table_row, { "Name" => "Customer 1" }).click
         within_modal "Product 1" do
-          within_section "Send missed posts", section_element: :section do
+          within_section "Send missed posts (11)", section_element: :section do
             click_on "Show more"
             within_section "Post 10" do
               click_on "Send"
@@ -566,6 +566,43 @@ describe "Sales page", type: :system, js: true do
         end
         expect(page).to have_alert(text: "You are not eligible to resend this email.")
         expect(EmailInfo.last.installment).to be_nil
+      end
+
+      it "allows sending all missed posts at once" do
+        allow_any_instance_of(User).to receive(:sales_cents_total).and_return(Installment::MINIMUM_SALES_CENTS_VALUE)
+        stripe_connect_account = create(:merchant_account_stripe_connect, user: seller)
+        create(:purchase, seller:, link: product1, merchant_account: stripe_connect_account)
+
+        visit customers_path
+        find(:table_row, { "Name" => "Customer 1" }).click
+        within_modal "Product 1" do
+          within_section "Send missed posts (11)", section_element: :section do
+            expect(page).to have_button("Send all")
+            click_on "Send all"
+            expect(page).to have_button("Sending...", disabled: true)
+            within_section "Post 0" do
+              expect(page).to have_button("Sending...", disabled: true)
+            end
+            expect(page).to have_button("Sent all", disabled: true)
+            within_section "Post 0" do
+              expect(page).to have_button("Sent", disabled: true)
+            end
+          end
+        end
+        expect(page).to have_alert(text: "Emails sent")
+      end
+
+      it "does not show Send all button when there is only one missed post" do
+        posts.first(10).each(&:destroy)
+
+        visit customers_path
+        find(:table_row, { "Name" => "Customer 1" }).click
+        within_modal "Product 1" do
+          within_section "Send missed posts (1)", section_element: :section do
+            expect(page).to have_button("Send")
+            expect(page).to_not have_button("Send all")
+          end
+        end
       end
     end
 

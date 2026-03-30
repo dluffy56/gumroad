@@ -710,6 +710,8 @@ const CustomerDrawer = ({
   const [emails, setEmails] = React.useState<CustomerEmail[] | null>(null);
   const [shownEmails, setShownEmails] = React.useState(PAGE_SIZE);
   const sentEmailIds = React.useRef<Set<string>>(new Set());
+  const [sentAll, setSentAll] = React.useState(false);
+  const [sendingAll, setSendingAll] = React.useState(false);
   useRunOnce(() => {
     getMissedPosts(customer.id, customer.email).then(setMissedPosts, (e: unknown) => {
       assertResponseError(e);
@@ -732,6 +734,29 @@ const CustomerDrawer = ({
       showAlert(e.message, "error");
     }
     setLoadingId(null);
+  };
+
+  const onSendAll = () => {
+    if (!missedPosts) return;
+    const unsent = missedPosts.filter((post) => !sentEmailIds.current.has(post.id));
+    if (unsent.length === 0) return;
+    setSendingAll(true);
+    showAlert(`Sending ${String(unsent.length)} email${unsent.length === 1 ? "" : "s"}...`, "success");
+    void Promise.allSettled(unsent.map((post) => resendPost(customer.id, post.id))).then((results) => {
+      const failedResults = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+      for (const [i, post] of unsent.entries()) {
+        if (results[i]?.status === "fulfilled") sentEmailIds.current.add(post.id);
+      }
+      setSendingAll(false);
+      if (failedResults.length > 0) {
+        const reason: unknown = failedResults[0]?.reason;
+        assertResponseError(reason);
+        showAlert(reason.message, "error");
+      } else {
+        setSentAll(true);
+        showAlert("Emails sent", "success");
+      }
+    });
   };
 
   const [productPurchases, setProductPurchases] = React.useState<Customer[]>([]);
@@ -1251,7 +1276,25 @@ const CustomerDrawer = ({
           <section>
             <CardContent asChild>
               <header>
-                <h3 className="grow">Send missed posts</h3>
+                <h3 className="grow">{`Send missed posts${missedPosts ? ` (${String(missedPosts.length)})` : ""}`}</h3>
+                {missedPosts && missedPosts.length > 1 ? (
+                  <Button
+                    color="primary"
+                    disabled={
+                      !!loadingId ||
+                      sendingAll ||
+                      sentAll ||
+                      missedPosts.every((post) => sentEmailIds.current.has(post.id))
+                    }
+                    onClick={onSendAll}
+                  >
+                    {sentAll || missedPosts.every((post) => sentEmailIds.current.has(post.id))
+                      ? "Sent all"
+                      : sendingAll
+                        ? "Sending..."
+                        : "Send all"}
+                  </Button>
+                ) : null}
               </header>
             </CardContent>
             {missedPosts ? (
@@ -1269,10 +1312,14 @@ const CustomerDrawer = ({
                       </div>
                       <Button
                         color="primary"
-                        disabled={!!loadingId || sentEmailIds.current.has(post.id)}
+                        disabled={!!loadingId || sendingAll || sentEmailIds.current.has(post.id)}
                         onClick={() => void onSend(post.id, "post")}
                       >
-                        {sentEmailIds.current.has(post.id) ? "Sent" : loadingId === post.id ? "Sending...." : "Send"}
+                        {sentEmailIds.current.has(post.id)
+                          ? "Sent"
+                          : sendingAll || loadingId === post.id
+                            ? "Sending..."
+                            : "Send"}
                       </Button>
                     </section>
                   </CardContent>
