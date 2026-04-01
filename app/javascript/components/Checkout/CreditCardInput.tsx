@@ -29,6 +29,7 @@ export const CreditCardInput = ({
   setUseSavedCard: (value: boolean) => void;
   onChange?: (evt: StripeCardElementChangeEvent) => void;
 }) => {
+  const font = useFont();
   // Actually set font family, size, and color and determined on the first render based on a ghost div that is unmounted
   // as soon as the measurement is performed.
   const [baseStripeStyle, setBaseStripeStyle] = React.useState<null | StripeElementStyleVariant>(null);
@@ -63,7 +64,7 @@ export const CreditCardInput = ({
                 const color = getCssVariable("color").split(" ").join(",");
                 const placeholderColor = `rgb(${color}, ${getCssVariable("gray-3")})`;
                 setBaseStripeStyle({
-                  fontFamily: inputStyle.fontFamily,
+                  fontFamily: font.name,
                   color: inputStyle.color,
                   iconColor: placeholderColor,
                   "::placeholder": { color: placeholderColor },
