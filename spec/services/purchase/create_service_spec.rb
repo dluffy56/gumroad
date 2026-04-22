@@ -3137,6 +3137,65 @@ describe Purchase::CreateService, :vcr do
     end
   end
 
+  describe "offer code usage protection" do
+    let(:price) { 0 }
+    let(:max_purchase_count) { nil } # product inventory is unlimited; we want to test the offer code lock, not the inventory lock
+    let(:offer_code) do
+      create(:offer_code, user:, products: [product], amount_cents: nil, amount_percentage: 100, max_purchase_count: 1)
+    end
+    let(:offer_code_params) do
+      base_params.deep_merge(purchase: { discount_code: offer_code.code })
+    end
+
+    it "prevents parallel purchases from redeeming a single-use offer code more than once" do
+      offer_code
+      purchase_1, error_1, purchase_2, error_2 = Array.new(4)
+      params_1 = offer_code_params.deep_merge(purchase: { email: "racer_1@example.com", browser_guid: SecureRandom.uuid })
+      params_2 = offer_code_params.deep_merge(purchase: { email: "racer_2@example.com", browser_guid: SecureRandom.uuid })
+
+      [
+        Thread.new { purchase_1, error_1 = Purchase::CreateService.new(product:, params: params_1).perform },
+        Thread.new { purchase_2, error_2 = Purchase::CreateService.new(product:, params: params_2).perform }
+      ].each(&:join)
+
+      states = [purchase_1.purchase_state, purchase_2.purchase_state]
+      errors = [error_1, error_2]
+
+      expect(states).to contain_exactly("successful", "failed")
+      expect(errors.compact.first).to match(/expired|invalid/i)
+      expect(offer_code.reload.times_used).to eq(1)
+    end
+
+    context "when an unexpected error is raised after the lock is acquired" do
+      it "releases the offer code semaphore so subsequent purchases can proceed" do
+        offer_code
+        service = Purchase::CreateService.new(product:, params: offer_code_params)
+        expect(service).to receive(:validate_bundle_products).and_raise(StandardError.new("boom"))
+        expect { service.perform }.to raise_error(StandardError, "boom")
+
+        purchase, error = Purchase::CreateService.new(product:, params: offer_code_params).perform
+        expect(purchase.purchase_state).to eq("successful")
+        expect(error).to eq(nil)
+        expect(offer_code.reload.times_used).to eq(1)
+      end
+    end
+
+    context "when the offer code has no max_purchase_count" do
+      let(:offer_code) do
+        create(:offer_code, user:, products: [product], amount_cents: nil, amount_percentage: 100, max_purchase_count: nil)
+      end
+
+      it "does not acquire the offer code semaphore" do
+        offer_code
+        expect(SuoSemaphore).not_to receive(:offer_code)
+
+        purchase, error = Purchase::CreateService.new(product:, params: offer_code_params).perform
+        expect(purchase.purchase_state).to eq("successful")
+        expect(error).to eq(nil)
+      end
+    end
+  end
+
   describe "custom fields" do
     let(:text_field) { create(:custom_field, products: [product], name: "Country", field_type: CustomField::TYPE_TEXT) }
     let(:checkbox_field) { create(:custom_field, products: [product], name: "Is that your real country?", field_type: CustomField::TYPE_CHECKBOX, required: true) }

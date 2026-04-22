@@ -5,6 +5,7 @@ class Purchase::CreateService < Purchase::BaseService
 
   RESERVED_URL_PARAMETERS = %w[code wanted referrer email as_modal as_embed debug affiliate_id].freeze
   INVENTORY_LOCK_ACQUISITION_TIMEOUT = 50.seconds
+  OFFER_CODE_LOCK_ACQUISITION_TIMEOUT = 50.seconds
 
   attr_reader :product, :params, :purchase_params, :gift_params, :buyer
   attr_accessor :purchase, :gift
@@ -134,6 +135,15 @@ class Purchase::CreateService < Purchase::BaseService
 
       validate_bundle_products
 
+      if purchase.offer_code&.max_purchase_count.present?
+        offer_code_semaphore = SuoSemaphore.offer_code(purchase.offer_code.id, acquisition_timeout: OFFER_CODE_LOCK_ACQUISITION_TIMEOUT)
+        offer_code_lock_token = offer_code_semaphore.lock
+        if offer_code_lock_token.nil?
+          Rails.logger.warn("Could not acquire lock for offer_code semaphore (offer_code id: #{purchase.offer_code.id})")
+          return nil, "Sorry, something went wrong. Please try again."
+        end
+      end
+
       purchase.prepare_for_charge!
 
       purchase.build_purchase_wallet_type(wallet_type: params[:wallet_type]) if params[:wallet_type].present?
@@ -170,6 +180,7 @@ class Purchase::CreateService < Purchase::BaseService
     return purchase, nil
   ensure
     inventory_semaphore.unlock(inventory_lock_token) if inventory_lock_token
+    offer_code_semaphore.unlock(offer_code_lock_token) if offer_code_lock_token
     handle_purchase_failure if purchase&.persisted? && purchase.in_progress? &&
       !purchase.requires_sca? && !purchase.is_part_of_combined_charge?
   end
